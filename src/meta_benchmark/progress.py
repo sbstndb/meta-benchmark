@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 import sys
-from typing import Optional, Tuple
 
 
 def render_progress_line(
@@ -7,7 +8,7 @@ def render_progress_line(
     max_runs: int,
     num_cases: int,
     num_stable: int,
-    worst: Optional[Tuple[str, float]],
+    worst: tuple[str, float] | None,
     num_unstable: int,
 ) -> str:
     width = 30

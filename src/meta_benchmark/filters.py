@@ -1,8 +1,9 @@
+from __future__ import annotations
+
 import re
-from typing import List, Optional
 
 
-def build_filter_regex_for_cases(cases: List[str]) -> Optional[str]:
+def build_filter_regex_for_cases(cases: list[str]) -> str | None:
     if not cases:
         return None
     escaped = [re.escape(c) for c in cases]

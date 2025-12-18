@@ -29,6 +29,7 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: POSIX :: Linux",
     "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
@@ -39,6 +40,9 @@ classifiers = [
     "Topic :: System :: Benchmark",
     "Typing :: Typed",
 ]
+
+[project.optional-dependencies]
+affinity = ["psutil>=5.9.0"]
 
 [project.urls]
 Homepage = "https://github.com/sbstndbs/meta-benchmark"

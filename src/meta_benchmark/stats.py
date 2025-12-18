@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
 
 
 TIME_UNIT_TO_NS = {
@@ -52,7 +51,7 @@ Z_CRITICAL_95 = 1.96
 
 @dataclass
 class CaseStats:
-    samples_ns: List[float] = field(default_factory=list)
+    samples_ns: list[float] = field(default_factory=list)
 
     def add(self, value_ns: float) -> None:
         self.samples_ns.append(value_ns)
@@ -92,8 +91,8 @@ def normalize_to_ns(value: float, unit: str) -> float:
     return value * factor
 
 
-def extract_case_values(json_doc: Dict) -> Dict[str, float]:
-    results: Dict[str, float] = {}
+def extract_case_values(json_doc: dict) -> dict[str, float]:
+    results: dict[str, float] = {}
     benches = json_doc.get("benchmarks", [])
     for row in benches:
         if row.get("aggregate_name"):
@@ -107,7 +106,7 @@ def extract_case_values(json_doc: Dict) -> Dict[str, float]:
     return results
 
 
-def update_stats(all_stats: Dict[str, CaseStats], new_values: Dict[str, float]) -> None:
+def update_stats(all_stats: dict[str, CaseStats], new_values: dict[str, float]) -> None:
     for name, value_ns in new_values.items():
         if name not in all_stats:
             all_stats[name] = CaseStats()
@@ -115,9 +114,9 @@ def update_stats(all_stats: Dict[str, CaseStats], new_values: Dict[str, float]) 
 
 
 def compute_unstable_cases(
-    all_stats: Dict[str, CaseStats], *, rel_ci_threshold: float, min_meta_reps: int
-) -> List[str]:
-    unstable: List[str] = []
+    all_stats: dict[str, CaseStats], *, rel_ci_threshold: float, min_meta_reps: int
+) -> list[str]:
+    unstable: list[str] = []
     for name, stats in all_stats.items():
         if stats.count < min_meta_reps:
             unstable.append(name)
@@ -128,16 +127,16 @@ def compute_unstable_cases(
 
 
 def compute_summary(
-    all_stats: Dict[str, CaseStats],
+    all_stats: dict[str, CaseStats],
     rel_ci_threshold: float,
     min_meta_reps: int,
-) -> Tuple[int, int, Optional[Tuple[str, float]], int]:
+) -> tuple[int, int, tuple[str, float] | None, int]:
     num_cases = len(all_stats)
     unstable = compute_unstable_cases(
         all_stats, rel_ci_threshold=rel_ci_threshold, min_meta_reps=min_meta_reps
     )
     num_stable = num_cases - len(unstable)
-    worst_case: Optional[Tuple[str, float]] = None
+    worst_case: tuple[str, float] | None = None
     worst_rci: float = float("-inf")
     for name, stats in all_stats.items():
         if stats.count < 2:
