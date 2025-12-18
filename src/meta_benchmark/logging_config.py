@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 import sys
 
-
 # Module-level logger for the package
 logger = logging.getLogger("meta_benchmark")
 

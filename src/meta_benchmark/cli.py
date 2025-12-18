@@ -30,7 +30,7 @@ from .stats import (
 )
 
 
-def parse_args(argv: list[str] | None = None) -> MetaConfig:
+def parse_args(argv: list[str] | None = None) -> tuple[MetaConfig, bool, bool]:
     p = argparse.ArgumentParser(description="Google Benchmark meta-repetition runner")
     p.add_argument("--exe", required=True, help="Path to Google Benchmark executable")
     p.add_argument(

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import tempfile
@@ -32,10 +33,8 @@ def write_json_atomic(output_file: str, data: Any) -> None:
     except OSError as e:
         # Clean up temp file if it exists
         if temp_path and os.path.exists(temp_path):
-            try:
+            with contextlib.suppress(OSError):
                 os.unlink(temp_path)
-            except OSError:
-                pass
         raise BenchmarkError(
             f"Failed to write to {output_file}",
             error=str(e),

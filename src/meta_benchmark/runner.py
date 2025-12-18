@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import platform
@@ -79,49 +80,50 @@ class GoogleBenchmarkRunner:
         try:
             if is_windows:
                 # On Windows, start process then set affinity
-                proc = subprocess.Popen(
+                with subprocess.Popen(
                     args,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     text=True,
-                )
-                # Set affinity on the spawned process
-                if self.pin_core is not None and validate_core_id(self.pin_core):
-                    set_process_affinity(proc.pid, self.pin_core)
-                stdout, stderr = proc.communicate()
-                proc.stdout = stdout  # type: ignore[assignment]
-                proc.stderr = stderr  # type: ignore[assignment]
+                ) as popen_proc:
+                    # Set affinity on the spawned process
+                    if self.pin_core is not None and validate_core_id(self.pin_core):
+                        set_process_affinity(popen_proc.pid, self.pin_core)
+                    stdout_str, stderr_str = popen_proc.communicate()
+                    returncode = popen_proc.returncode
             else:
                 # On POSIX, use preexec_fn for child process affinity
-                proc = subprocess.run(
+                result = subprocess.run(
                     args,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
+                    capture_output=True,
                     text=True,
                     preexec_fn=preexec_fn,
                     check=False,
                 )
+                stdout_str = result.stdout or ""
+                stderr_str = result.stderr or ""
+                returncode = result.returncode
         except subprocess.TimeoutExpired as e:
             raise BenchmarkError(
-                f"Benchmark timed out",
+                "Benchmark timed out",
                 command=args,
                 error=str(e),
             ) from e
         except OSError as e:
             raise BenchmarkError(
-                f"Failed to execute benchmark",
+                "Failed to execute benchmark",
                 command=args,
                 error=str(e),
             ) from e
 
-        if proc.returncode != 0:
+        if returncode != 0:
             raise BenchmarkError(
-                f"Benchmark failed (code {proc.returncode})",
-                stderr=proc.stderr,
+                f"Benchmark failed (code {returncode})",
+                stderr=stderr_str,
                 command=args,
             )
 
-        stdout = (proc.stdout or "").strip()
+        stdout = stdout_str.strip()
         if not stdout:
             data: dict = {"benchmarks": []}
             logger.debug("Benchmark returned empty output")
@@ -162,10 +164,8 @@ def _write_json_atomic(output_file: str, data: dict) -> None:
         os.replace(temp_path, output_file)  # Atomic on POSIX
     except OSError as e:
         if temp_path and os.path.exists(temp_path):
-            try:
+            with contextlib.suppress(OSError):
                 os.unlink(temp_path)
-            except OSError:
-                pass
         raise BenchmarkError(
             f"Failed to save benchmark results to {output_file}",
             error=str(e),
