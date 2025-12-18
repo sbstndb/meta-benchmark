@@ -28,6 +28,7 @@ class MetaConfig:
     pin_core: int | None
     repetitions: int | None
     live_progress: bool
+    timeout_sec: float
     verbose: bool = False
 
 
@@ -38,11 +39,13 @@ class GoogleBenchmarkRunner:
         pin_core: int | None = None,
         repetitions: int | None = None,
         warmup_sec: float | None = None,
+        timeout_sec: float | None = None,
     ) -> None:
         self.exe_path = exe_path
         self.pin_core = pin_core
         self.repetitions = repetitions
         self.warmup_sec = warmup_sec
+        self.timeout_sec = timeout_sec
         if not os.path.isfile(exe_path) or not os.access(exe_path, os.X_OK):
             raise FileNotFoundError(f"Executable not found or not executable: {exe_path}")
         logger.debug("Initialized GoogleBenchmarkRunner with exe=%s", exe_path)
@@ -89,7 +92,7 @@ class GoogleBenchmarkRunner:
                     # Set affinity on the spawned process
                     if self.pin_core is not None and validate_core_id(self.pin_core):
                         set_process_affinity(popen_proc.pid, self.pin_core)
-                    stdout_str, stderr_str = popen_proc.communicate()
+                    stdout_str, stderr_str = popen_proc.communicate(timeout=self.timeout_sec)
                     returncode = popen_proc.returncode
             else:
                 # On POSIX, use preexec_fn for child process affinity
@@ -99,6 +102,7 @@ class GoogleBenchmarkRunner:
                     text=True,
                     preexec_fn=preexec_fn,
                     check=False,
+                    timeout=self.timeout_sec,
                 )
                 stdout_str = result.stdout or ""
                 stderr_str = result.stderr or ""

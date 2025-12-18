@@ -15,6 +15,9 @@ DEFAULT_MIN_TIME_SEC = 0.05  # Minimum time per benchmark iteration
 # Output
 DEFAULT_OUTPUT_FILE = "meta_results.json"
 
+# Timeout (4 hours by default - safety net, not a real limit)
+DEFAULT_TIMEOUT_SEC = 14400  # 4 * 60 * 60
+
 # Exit codes
 EXIT_SUCCESS = 0
 EXIT_ERROR = 1

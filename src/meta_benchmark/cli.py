@@ -10,6 +10,7 @@ from .constants import (
     DEFAULT_MIN_TIME_SEC,
     DEFAULT_OUTPUT_FILE,
     DEFAULT_REL_CI_THRESHOLD,
+    DEFAULT_TIMEOUT_SEC,
     EXIT_ERROR,
     EXIT_INTERRUPTED,
     EXIT_NO_BENCHMARKS,
@@ -107,6 +108,13 @@ def parse_args(argv: list[str] | None = None) -> tuple[MetaConfig, bool, bool]:
         help="If set, passes --benchmark_repetitions=N to Google Benchmark",
     )
     p.add_argument(
+        "--timeout",
+        type=float,
+        default=DEFAULT_TIMEOUT_SEC,
+        dest="timeout_sec",
+        help=f"Timeout in seconds for each benchmark run (default: {DEFAULT_TIMEOUT_SEC} = 4 hours)",
+    )
+    p.add_argument(
         "--no-live", action="store_true", default=False, dest="no_live", help="Disable live single-line progress output"
     )
     p.add_argument(
@@ -131,6 +139,7 @@ def parse_args(argv: list[str] | None = None) -> tuple[MetaConfig, bool, bool]:
         pin_core=args.pin_core,
         repetitions=args.repetitions,
         live_progress=(not args.no_live),
+        timeout_sec=args.timeout_sec,
         verbose=args.verbose,
     ), args.verbose, args.quiet
 
@@ -168,6 +177,8 @@ def validate_config(cfg: MetaConfig) -> None:
         raise ValueError("--warmup-sec must be >= 0")
     if cfg.repetitions is not None and cfg.repetitions <= 0:
         raise ValueError("--repetitions must be > 0")
+    if cfg.timeout_sec <= 0:
+        raise ValueError("--timeout must be > 0")
 
 
 def run_meta_benchmark_loop(
@@ -316,6 +327,7 @@ def main(argv: list[str] | None = None) -> int:
             pin_core=cfg.pin_core,
             repetitions=cfg.repetitions,
             warmup_sec=cfg.warmup_sec,
+            timeout_sec=cfg.timeout_sec,
         )
     except FileNotFoundError as e:
         logger.error("Failed to initialize runner: %s", e)
