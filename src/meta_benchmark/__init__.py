@@ -1,7 +1,9 @@
 """Meta Benchmark package.
 
-Public API re-exports for convenience.
+Run Google Benchmark binaries with statistical meta-repetitions until results stabilize.
 """
+
+__version__ = "0.1.0"
 
 from .runner import GoogleBenchmarkRunner, MetaConfig, ensure_dir
 from .stats import (
@@ -20,6 +22,7 @@ from .io_utils import write_summary
 from .progress import render_progress_line, print_live_progress
 
 __all__ = [
+    "__version__",
     "GoogleBenchmarkRunner",
     "MetaConfig",
     "ensure_dir",

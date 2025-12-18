@@ -1,7 +1,49 @@
+# C++ build artifacts
 build/
 CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake
 Makefile
+
+# Meta-benchmark runtime outputs
 raw_runs/
 meta_results.json
+
+# Python build artifacts
+dist/
+*.egg-info/
+*.egg
+.eggs/
+*.whl
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+.python-version
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# mypy
+.mypy_cache/
+
+# ruff
+.ruff_cache/
