@@ -1,7 +1,23 @@
 ### Meta Benchmark Runner (Google Benchmark meta-repetitions)
 
-This repository provides:
-- A Python tool (`main.py`) to run Google Benchmark binaries with meta-repetitions, re-running only unstable cases using Google Benchmark's `--benchmark_filter`.
+A Python tool to run Google Benchmark binaries with statistical meta-repetitions, automatically re-running only unstable cases until results stabilize.
+
+## Installation
+
+```bash
+# Basic installation
+pip install meta-benchmark
+
+# With cross-platform CPU affinity support (recommended)
+pip install meta-benchmark[affinity]
+```
+
+Or install from source:
+```bash
+git clone https://github.com/sbstndb/meta-benchmark.git
+cd meta-benchmark
+pip install -e .
+```
 
 ## How it works
 
@@ -22,7 +38,7 @@ Concise algorithm overview:
 - Python 3.9+
 - Git (optional, for cloning)
 
-No Python dependencies are required beyond the standard library.
+No Python dependencies are required beyond the standard library. Optional: install `psutil` for cross-platform CPU affinity support (Linux, Windows, FreeBSD).
 
 
 #### 2) Build the sample benchmarks (optional)
@@ -43,8 +59,8 @@ cmake --build build --config Release -j
 
 #### 3) Run the meta runner on the sample
 ```bash
-# From repository root (compat wrapper)
-python3 main.py \
+# Using the installed package
+meta-benchmark \
   --exe ./build/sample_benchmarks \
   --min-meta-reps 5 \
   --max-meta-reps 30 \
@@ -52,13 +68,23 @@ python3 main.py \
   --min-time-sec 0.05 \
   --output meta_results.json \
   --save-raw raw_runs
+
+# Or using the compatibility wrapper
+python3 main.py --exe ./build/sample_benchmarks
 ```
-- `--min-meta-reps`: minimal number of meta-repetitions before stability can be evaluated
-- `--max-meta-reps`: hard cap to stop re-running
-- `--rel-ci-threshold`: relative 95% CI half-width target (e.g., 0.03 = 3%)
-- `--min-time-sec`: forwarded to Google Benchmark as `--benchmark_min_time`
-- `--warmup-sec`: optional warmup time (seconds), forwarded as `--benchmark_min_warmup_time`; no warmup by default
+
+**Core options:**
+- `--min-meta-reps`: minimal number of meta-repetitions before stability can be evaluated (default: 5)
+- `--max-meta-reps`: hard cap to stop re-running (default: 30)
+- `--rel-ci-threshold`: relative 95% CI half-width target, e.g., 0.03 = 3% (default: 0.03)
+- `--min-time-sec`: forwarded to Google Benchmark as `--benchmark_min_time` (default: 0.05)
+- `--warmup-sec`: optional warmup time (seconds), forwarded as `--benchmark_min_warmup_time`
 - `--save-raw`: directory where each raw JSON output per run is stored
+- `--timeout`: timeout in seconds for each benchmark run (default: 14400 = 4 hours)
+
+**Logging options:**
+- `-v, --verbose`: enable debug logging for troubleshooting
+- `-q, --quiet`: suppress info messages, only show warnings and errors
 
 The tool will:
 - Run the executable once (optionally filtered), collect `real_time` for each benchmark case
@@ -69,7 +95,7 @@ The tool will:
 
 Alternatively, run the package module directly:
 ```bash
-PYTHONPATH=src python3 -m meta_benchmark \
+python3 -m meta_benchmark \
   --exe ./build/sample_benchmarks \
   --min-meta-reps 40 \
   --max-meta-reps 200 \
@@ -79,17 +105,29 @@ PYTHONPATH=src python3 -m meta_benchmark \
   --save-raw raw_runs
 ```
 
-#### 4) Restrict to a subset of tests
+
+#### 4) CPU affinity (reduce noise)
+Pin the benchmark process to a specific CPU core to reduce scheduling noise:
+```bash
+meta-benchmark --exe ./build/sample_benchmarks --pin-core 0
+```
+
+**Platform support:**
+- **Linux**: Native support via `os.sched_setaffinity`, or via `psutil` if installed
+- **Windows/FreeBSD**: Requires `psutil` (`pip install meta-benchmark[affinity]`)
+- **macOS**: CPU affinity is not supported (warning logged, benchmark runs normally)
+
+#### 5) Restrict to a subset of tests
 If you only want to consider a subset of benchmarks from the start, use `--base-filter` (regular expression understood by Google Benchmark):
 ```bash
-python3 main.py --exe ./build/sample_benchmarks --base-filter "BM_String.*"
+meta-benchmark --exe ./build/sample_benchmarks --base-filter "BM_String.*"
 ```
 
 
-#### 5) Pass extra Google Benchmark flags
+#### 6) Pass extra Google Benchmark flags
 Use `--gb-arg` multiple times to forward arguments to the benchmark executable:
 ```bash
-python3 main.py \
+meta-benchmark \
   --exe ./build/sample_benchmarks \
   --gb-arg --benchmark_counters_tabular=false \
   --gb-arg --benchmark_report_aggregates_only=false
@@ -97,11 +135,11 @@ python3 main.py \
 
 Optional: enforce Google Benchmark repetitions (by default, repetitions are not set, GB defaults apply):
 ```bash
-python3 main.py --exe ./build/sample_benchmarks --repetitions 10
+meta-benchmark --exe ./build/sample_benchmarks --repetitions 10
 ```
 
 
-#### 6) Output format
+#### 7) Output format
 `meta_results.json` contains, per benchmark case name:
 - `count`: number of meta-repetitions run
 - `mean_ns`, `stddev_ns`: statistics over meta-repetitions (nanoseconds)
@@ -126,33 +164,40 @@ Example snippet:
 ```
 
 
-#### 7) Notes
+#### 8) Notes
 - The tool ignores aggregate rows from Google Benchmark JSON (e.g., `aggregate_name` like `mean` or `median`). It uses only per-run `real_time` values.
 - Times are normalized to nanoseconds regardless of the benchmark's `time_unit`.
 - For small sample sizes, the Student t critical value is used (table for df=1..30). For n > 30, z = 1.96 is used.
 - Live one-line progress is enabled by default; disable with `--no-live`.
 - By default, the runner passes to Google Benchmark: `--benchmark_counters_tabular=false` and `--benchmark_enable_random_interleaving=true`.
+- Each benchmark run has a 4-hour timeout by default (configurable with `--timeout`).
 
 
-#### 8) Project layout
+#### 9) Project layout
 - `main.py`: compatibility wrapper delegating to the package in `src/`
 - `src/meta_benchmark/`: Python package
-  - `cli.py`: CLI and main loop
-  - `runner.py`: process runner and `MetaConfig`
-  - `stats.py`: stats computation and data structures
-  - `filters.py`: benchmark filter helpers
-  - `io_utils.py`: summary writer
-  - `progress.py`: live progress helpers
+  - `cli.py`: CLI entry point and main loop
+  - `runner.py`: subprocess runner and `MetaConfig` dataclass
+  - `stats.py`: statistics computation and `CaseStats` data structure
+  - `filters.py`: benchmark filter regex helpers
+  - `io_utils.py`: JSON output and summary writer
+  - `progress.py`: live progress display
+  - `constants.py`: default values and exit codes
+  - `exceptions.py`: custom `BenchmarkError` exception
+  - `cpu_affinity.py`: cross-platform CPU pinning
+  - `logging_config.py`: logging setup
   - `__main__.py`: allows `python -m meta_benchmark`
 - `benchmarks/`: sample C++ benchmarks and CMake build
 - `benchmarks/CMakeLists.txt`: top-level CMake file for samples (configure with `cmake -S benchmarks -B build`)
 
 
-#### 9) Tips
+#### 10) Tips
 - If your benchmarks are very fast, increase `--min-time-sec` to reduce noise.
 - `--warmup-sec` can improve stability for cold caches/branch predictors at the cost of time.
 - You can combine `--base-filter` to select your suite and let the meta-runner manage the stability.
+- Use `--pin-core 0` to reduce scheduling noise (requires `psutil` on Windows).
+- Use `-v` to debug issues or `-q` to reduce output in CI/CD pipelines.
 
 
-#### 10) License
+#### 11) License
 MIT License. See `LICENSE` for details.
