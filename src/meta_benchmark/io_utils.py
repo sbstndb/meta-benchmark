@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import math
 import os
 import tempfile
 from typing import Any
@@ -42,13 +43,18 @@ def write_json_atomic(output_file: str, data: Any) -> None:
 
 
 def write_summary(output_file: str, config: MetaConfig, stats: dict[str, CaseStats], stable_set: set[str]) -> None:
-    out_cases: dict[str, dict[str, float]] = {}
+    out_cases: dict[str, dict[str, Any]] = {}
     for name, s in sorted(stats.items()):
+        # rel_ci95_half() can return inf when count < 2 or mean == 0.
+        # Infinity is not valid JSON, so we use None (-> null) instead.
+        rel_ci = s.rel_ci95_half() if s.count >= 2 else None
+        if rel_ci is not None and not math.isfinite(rel_ci):
+            rel_ci = None
         out_cases[name] = {
             "count": s.count,
             "mean_ns": s.mean,
             "stddev_ns": s.stddev if s.count >= 2 else 0.0,
-            "rel_ci95_half": s.rel_ci95_half() if s.count >= 2 else float("inf"),
+            "rel_ci95_half": rel_ci,
             "stable": name in stable_set,
         }
     payload = {

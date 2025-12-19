@@ -92,7 +92,14 @@ class GoogleBenchmarkRunner:
                     # Set affinity on the spawned process
                     if self.pin_core is not None and validate_core_id(self.pin_core):
                         set_process_affinity(popen_proc.pid, self.pin_core)
-                    stdout_str, stderr_str = popen_proc.communicate(timeout=self.timeout_sec)
+                    try:
+                        stdout_str, stderr_str = popen_proc.communicate(timeout=self.timeout_sec)
+                    except subprocess.TimeoutExpired:
+                        # On Windows, communicate() does NOT kill the child on timeout.
+                        # We must kill explicitly to avoid blocking in __exit__'s wait().
+                        popen_proc.kill()
+                        popen_proc.communicate()  # Drain pipes and reap the process
+                        raise
                     returncode = popen_proc.returncode
             else:
                 # On POSIX, use preexec_fn for child process affinity
