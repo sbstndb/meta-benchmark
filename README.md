@@ -37,6 +37,10 @@ meta-benchmark --exe ./build/my_benchmarks
 
 Full CLI reference: [docs/usage.md](docs/usage.md)
 
+## Context
+
+This project is part of a tooling initiative for the [CMAP](https://cmap.ip-paris.fr/) / [hpc@maths](https://music-hpc.music.polytechnique.fr/) team at École Polytechnique.
+
 ## License
 
 MIT
